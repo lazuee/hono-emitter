@@ -1,6 +1,6 @@
 ## hono-emitter
 
-> `hono-emitter` is an Event Emitter designed as a route handler for HonoJS.
+> `hono-emitter` is an Event emitter-based route handler for HonoJS.
 
 ### Installation
 
