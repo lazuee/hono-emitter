@@ -1,0 +1,63 @@
+{
+  "name": "@lazuee/hono-emitter",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "An event emitter for HonoJS",
+  "keywords": [
+    "emitter",
+    "event",
+    "event-emitter",
+    "hono",
+    "listener"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "lazuee",
+    "email": "lazuee.dev@gmail.com"
+  },
+  "homepage": "https://github.com/lazuee/hono-emitter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lazuee/hono-emitter.git",
+    "directory": "packages/hono-emitter"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.cts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./*"
+      ]
+    }
+  },
+  "files": [
+    "LICENSE.md",
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown"
+  },
+  "peerDependencies": {
+    "hono": "^4.7.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "typescript": "^5.8.3"
+  }
+}

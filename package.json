@@ -1,0 +1,29 @@
+{
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm run build:package && pnpm run build:app",
+    "build:app": "pnpm run -r --stream --if-present --parallel --filter {app} --workspace-concurrency=Infinity /^build.*/",
+    "build:package": "pnpm run -r --stream --if-present --parallel --filter {packages/**} --workspace-concurrency=Infinity /^build.*/",
+    "dev": "pnpm run -r --stream --if-present --parallel --filter {app} --workspace-concurrency=Infinity /^dev.*/",
+    "lint": "pnpm run --stream --if-present /^lint:.*/",
+    "lint:eslint": "eslint . --fix",
+    "start": "pnpm run -r  --stream --if-present --parallel --filter {app} --workspace-concurrency=Infinity /^start.*/"
+  },
+  "devDependencies": {
+    "@ntnyq/eslint-config": "^4.3.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^9.28.0",
+    "ts-node": "^10.9.2",
+    "tsdown": "^0.12.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "unrs-resolver"
+    ]
+  }
+}
