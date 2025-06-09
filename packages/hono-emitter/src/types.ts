@@ -1,4 +1,6 @@
-import { type Context, type Hono } from "hono";
+import { type Context } from "hono";
+import { type Hono } from "hono";
+import { type hc } from "hono/client";
 import { type HonoBase } from "hono/hono-base";
 import {
   type BlankInput,
@@ -8,18 +10,37 @@ import {
   type ToSchema,
   type TypedResponse,
 } from "hono/types";
+import { type UnionToIntersection } from "hono/utils/types";
 import { type HonoEmitter } from ".";
 
+export type IfUnionUnknown<T> = [T] extends [UnionToIntersection<T>]
+  ? T
+  : unknown;
 type AnyCase<M extends string> = Capitalize<M> | M | Uppercase<M>;
-
-type RemoveDoubleSlashes<S extends string> =
-  S extends `${infer Head}//${infer Tail}`
-    ? RemoveDoubleSlashes<`${Head}/${Tail}`>
-    : S;
+type RemoveDoubleSlashes<S extends string> = S extends `${infer H}//${infer T}`
+  ? RemoveDoubleSlashes<`${H}/${T}`>
+  : S;
 type TrimStart<T extends string> = T extends ` ${infer R}` ? TrimStart<R> : T;
 type TrimEnd<T extends string> = T extends `${infer R} ` ? TrimEnd<R> : T;
 type Trim<T extends string> = TrimStart<TrimEnd<T>>;
 type Awaitable<T> = PromiseLike<T> | T;
+type SplitPath<S extends string> = S extends `/${infer Rest}`
+  ? SplitPath<Rest>
+  : S extends `${infer Head}/${infer Tail}`
+    ? [Head, ...SplitPath<Tail>]
+    : S extends ""
+      ? []
+      : [S];
+type GetNestedValue<T, Keys extends string[]> = Keys extends [
+  infer K,
+  ...infer R,
+]
+  ? K extends keyof T
+    ? R extends string[]
+      ? GetNestedValue<T[K], R>
+      : never
+    : never
+  : T;
 
 type GetEnv<T extends HonoBase = Hono> =
   T extends Hono<infer E, any, any> ? E : never;
@@ -95,3 +116,25 @@ export type HonoExtend<
     GetBasePath<H>
   >
 >;
+
+export type SchemaRoutes<H extends HonoBase = Hono> = {
+  [K in keyof GetSchema<H>]: {
+    [M in `$${HTTPMethod}` &
+      keyof GetSchema<H>[K]]: `${Lowercase<M extends `$${infer I}` ? I : never>}:${Extract<K, string>}`;
+  }[`$${HTTPMethod}` & keyof GetSchema<H>[K]];
+}[keyof GetSchema<H>];
+export type SchemaRoutesEmit<H extends HonoBase> = {
+  [K in SchemaRoutes<H>]: K extends `${infer M}:${infer P}`
+    ? `$${M}` extends keyof GetNestedValue<
+        ReturnType<typeof hc<H>>,
+        SplitPath<P>
+      >
+      ? GetNestedValue<
+          ReturnType<typeof hc<H>>,
+          SplitPath<P>
+        >[`$${M}`] extends (...args: any) => any
+        ? GetNestedValue<ReturnType<typeof hc<H>>, SplitPath<P>>[`$${M}`]
+        : never
+      : never
+    : never;
+};

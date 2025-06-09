@@ -1,11 +1,20 @@
-import { Hono, type Context, type Next } from "hono";
+import { Hono, type Context } from "hono";
+import { hc } from "hono/client";
 import { type HonoBase } from "hono/hono-base";
-import { type BlankInput, type HandlerResponse, type Input } from "hono/types";
+import {
+  type BlankInput,
+  type HandlerResponse,
+  type Input,
+  type Next,
+} from "hono/types";
 import {
   type HonoExtend,
   type HTTPMethod,
+  type IfUnionUnknown,
   type RouteEvent,
   type RouteHandler,
+  type SchemaRoutes,
+  type SchemaRoutesEmit,
 } from "./types";
 
 const regexLeadingSlash = /^\//;
@@ -17,8 +26,10 @@ const isPromise = <T>(value: unknown): value is Promise<T> =>
   "then" in value &&
   typeof (value as any).then === "function";
 
-export class HonoEmitter<H extends HonoBase = Hono> {
+type BaseURL = `http://${string}` | `https://${string}`;
+export class HonoEmitter<H extends HonoBase = Hono, S extends BaseURL = any> {
   #raw: H;
+  #client: ReturnType<typeof hc<H>>;
   #routes = new Map<
     `${HTTPMethod}:${string}`,
     {
@@ -27,11 +38,26 @@ export class HonoEmitter<H extends HonoBase = Hono> {
       handlers: [handler: RouteHandler<H, any>, once: boolean][];
     }
   >();
+  #baseUrl?: S;
 
   [key: string]: unknown;
 
-  constructor(hono: H = new Hono() as H) {
+  constructor(hono: H = new Hono() as H, baseUrl?: S) {
     this.#raw = hono;
+
+    if (baseUrl) {
+      try {
+        this.#baseUrl = new URL(baseUrl).origin as S;
+      } catch {
+        throw new Error(
+          `Invalid base URL: "${baseUrl}" - must be a valid http/https URL`,
+        );
+      }
+    }
+
+    this.#raw.get("/hono-emitter/test", (ctx) => ctx.text("ok")); // test baseUrl
+    this.#client = hc<H>(this.#baseUrl ?? "/");
+
     const honoFetch = this.#raw.fetch;
     this.#raw.fetch = (request, env, ctx) => {
       this.#register();
@@ -162,6 +188,44 @@ export class HonoEmitter<H extends HonoBase = Hono> {
     });
     if (entry.handlers.length === 0) this.#routes.delete(id);
     return this;
+  }
+
+  async emit<K extends SchemaRoutes<H>>(
+    event: K,
+    //@ts-expect-error - unsafe
+    ...args: Parameters<IfUnionUnknown<SchemaRoutesEmit<H>[K]>> extends never
+      ? []
+      : //@ts-expect-error - unsafe
+        Parameters<IfUnionUnknown<SchemaRoutesEmit<H>[K]>>
+    //@ts-expect-error - unsafe
+  ): IfUnionUnknown<ReturnType<SchemaRoutesEmit<H>[K]>> {
+    if (!this.#baseUrl) {
+      throw new Error("Base URL required - provide it in constructor");
+    }
+
+    if (!this.__checkBaseURL) {
+      try {
+        await this.#getClientRoute(
+          `get:${(this.#raw as any)._basePath}/hono-emitter/test`,
+        )();
+        this.__checkBaseURL = true;
+      } catch {
+        throw new Error(`Server not reachable at ${this.#baseUrl}`);
+      }
+    }
+
+    return this.#getClientRoute(event)?.(...args);
+  }
+
+  #getClientRoute(event: string) {
+    const [method, ...rest] = event.split(":");
+    const segments = rest.join(":").split("/").filter(Boolean);
+    const target = segments.reduce(
+      (obj, key) => (obj as any)?.[key],
+      this.#client,
+    );
+
+    return (target as any)?.[`$${method}`];
   }
 
   #register() {

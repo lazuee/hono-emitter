@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "cross-env NODE_OPTIONS=\"--no-warnings --loader=ts-node/esm\" node --env-file-if-exists=.env ./src/index.ts",
+    "dev:client": "cross-env NODE_OPTIONS=\"--no-warnings --loader=ts-node/esm\" node --env-file-if-exists=.env ./src/client.ts",
     "start": "node ./dist/index.js"
   },
   "dependencies": {
