@@ -10,7 +10,7 @@ import {
 import {
   type HonoExtend,
   type HTTPMethod,
-  type IfUnionUnknown,
+  type IfUnionAny,
   type RouteEvent,
   type RouteHandler,
   type SchemaRoutes,
@@ -193,12 +193,12 @@ export class HonoEmitter<H extends HonoBase = Hono, S extends BaseURL = any> {
   async emit<K extends SchemaRoutes<H>>(
     event: K,
     //@ts-expect-error - unsafe
-    ...args: Parameters<IfUnionUnknown<SchemaRoutesEmit<H>[K]>> extends never
+    ...args: Parameters<IfUnionAny<SchemaRoutesEmit<H>[K]>> extends never
       ? []
       : //@ts-expect-error - unsafe
-        Parameters<IfUnionUnknown<SchemaRoutesEmit<H>[K]>>
+        Parameters<IfUnionAny<SchemaRoutesEmit<H>[K]>>
     //@ts-expect-error - unsafe
-  ): IfUnionUnknown<ReturnType<SchemaRoutesEmit<H>[K]>> {
+  ): IfUnionAny<ReturnType<SchemaRoutesEmit<H>[K]>> {
     if (!this.#baseUrl) {
       throw new Error("Base URL required - provide it in constructor");
     }

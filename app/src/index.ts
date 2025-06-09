@@ -27,6 +27,7 @@ export const emitter = new HonoEmitter(app, "http://localhost:3000")
 emitter.on("get:/hello", (ctx) => ctx.text("hello"));
 
 if (isCLI) {
+  // If running directly, start the server
   serve({ ...app, port: 3000 }, () => {
     console.log("server is running...");
   });

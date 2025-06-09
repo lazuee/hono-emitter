@@ -13,9 +13,7 @@ import {
 import { type UnionToIntersection } from "hono/utils/types";
 import { type HonoEmitter } from ".";
 
-export type IfUnionUnknown<T> = [T] extends [UnionToIntersection<T>]
-  ? T
-  : unknown;
+export type IfUnionAny<T> = [T] extends [UnionToIntersection<T>] ? T : any;
 type AnyCase<M extends string> = Capitalize<M> | M | Uppercase<M>;
 type RemoveDoubleSlashes<S extends string> = S extends `${infer H}//${infer T}`
   ? RemoveDoubleSlashes<`${H}/${T}`>

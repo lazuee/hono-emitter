@@ -11,13 +11,17 @@ pnpm add -D @lazuee/hono-emitter
 ### Usage
 
 ```ts
+import { argv } from "node:process";
+import { fileURLToPath } from "node:url";
+
 import { serve } from "@hono/node-server";
 import { HonoEmitter } from "@lazuee/hono-emitter";
 import { Hono } from "hono";
 
+const isCLI = fileURLToPath(import.meta.url) === argv[1];
 const app = new Hono().basePath("/api").get("/ping", (ctx) => ctx.text("pong"));
 
-export const network = new HonoEmitter(app)
+export const emitter = new HonoEmitter(app, "http://localhost:3000")
   .on("get:/world", (ctx) => {
     console.log("hello world");
     return ctx.text("hello world");
@@ -28,20 +32,36 @@ export const network = new HonoEmitter(app)
     console.log("middleware end");
   });
 
-network.on("get:/hello", (ctx) => ctx.text("hello")); // not included in typings (not chained)
+emitter.on("get:/hello", (ctx) => ctx.text("hello")); // not included in typings (not chained)
 
-serve({ ...app, port: 3000 }, () => console.log("server is running..."));
+if (isCLI) {
+  // If running directly, start the server
+  serve({ ...app, port: 3000 }, () => {
+    console.log("server is running...");
+  });
+}
 ```
 
 #### Client types
 ```ts
 import { hc } from "hono/client";
-import { type emitter } from ".";
+import { emitter } from ".";
 
-const client = hc<typeof emitter.app>("/");
-client.api.ping.$get();
-client.api.world.$get();
-// client.api.hello.$get(); // not available in types (not chained)
+const log =
+  <S extends string>(name: S) =>
+  <T extends Record<string, any>>(x: T) =>
+    x.text().then((y: string) => console.log(`${name}:`, y));
+
+const client = hc<typeof emitter.app>("http://localhost:3000");
+await client.api.ping.$get().then(log("client[/api/ping]"));
+await client.api.world.$get().then(log("client[/api/world]"));
+//@ts-expect-error - not available in types (not chained)
+await client.api.hello.$get().then(log("client[/api/hello]"));
+
+await emitter.emit("get:/api/ping").then(log("emitter[/api/ping]"));
+await emitter.emit("get:/api/world").then(log("emitter[/api/world]"));
+//@ts-expect-error - not available in types (not chained)
+await emitter.emit("get:/api/hello").then(log("emitter[/api/hello]"));
 ```
 
 For a usage example, check the [app/](https://github.com/lazuee/hono-emitter/tree/main/app) directory.
